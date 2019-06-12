@@ -1,1 +1,57 @@
-sfds
+sub_summary = function(d, cates, n_split=6){
+# values counts function, available for categorical features
+  d_s = data.frame()
+  n = dim(d)[1]
+  q_values = c(0, 0.05, 0.25, 0.5, 0.75, 0.95, 1)
+  for(i_x in names(d)){
+    if(i_x %in% cates){
+      i_d = count(d[[i_x]])
+      i_d[[QUANT]] = round(i_d[[FREQ]] * 100 / n, 1)
+      i_d[dim(i_d)[1]+1, VAR_NAME] = i_x
+      i_d = i_d[c(dim(i_d)[1], 1:(dim(i_d)[1]-1)),c(4,1,2,3)]
+      names(i_d)[2] = VALUE
+    }else{
+      q_v = sum(is.na(d[[i_x]]))
+      i_max = max(d[[i_x]], na.rm=TRUE)
+      i_min = min(d[[i_x]], na.rm=TRUE)
+      qs = i_min
+      for(i in 1:n_split){
+        i_q = i_min + (i_max-i_min) / n_split * i
+        qs = c(qs, i_q)
+        q_v = c(q_v, sum(d[[i_x]] <= i_q, na.rm = TRUE))
+      }
+      for(i in length(q_v):3){
+        q_v[i] = q_v[i] - q_v[i-1]
+      }
+      qs = round(qs, 1)
+      labels = c()
+      for(i in 1:length(q_v)){
+        if(i == 1){
+          i_l = 'Missing'
+        }else{
+          i_l = paste(qs[i-1], ' < ', qs[i], sep='')
+        }
+        labels = c(labels, i_l)
+      }
+      i_d = data.frame(list(labels, q_v))
+      names(i_d) = c(VALUE, FREQ)
+      i_d[[QUANT]] = 100 * i_d[[FREQ]] / n
+      
+      i_d[dim(i_d)[1]+1, VAR_NAME] = i_x
+      i_d = i_d[c(dim(i_d)[1], 2:(dim(i_d)[1]-1), 1),c(4,1,2,3)]
+    }
+    row.names(i_d) = NULL
+    i_d[[VALUE]] = as.character(i_d[[VALUE]])
+    if(is.na(i_d[dim(i_d)[1], 2])){
+      i_d[dim(i_d)[1], 2] = 'Missing'
+    }
+    d_s = rbind(d_s, i_d)
+  }
+  # filter 0
+  col_0 = d_s[[FREQ]] == 0
+  col_0[is.na(col_0)] = FALSE
+  if(sum(col_0) == 0){
+    d_s = d_s[!col_0,]
+  }
+  return(d_s)
+}
